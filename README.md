@@ -7,6 +7,26 @@ A mobile robot that uses computer vision and real-time image processing to detec
 
 ## Features
 ### Smooth Motion Control
-- The robot calculates motor positions and velocities along a cubic spline trajectory at each time step.
-- This ensures fluid movement without abrupt starts or stops, improving tracking performance.
-- Full mathematical derivations and implementation details are available in the [project report](Software-Architecture-Report.pdf).
+-### Smooth Motion Control
+- Motor positions and velocities are planned using cubic spline interpolation for both pan and tilt axes.
+- At each control loop iteration, the system calculates updated commands based on current feedback and target positions.
+- Real-time adjustments ensure smooth transitions, avoiding abrupt starts or stops while accurately following dynamic targets.
+- Data logging and visualization of positions and velocities allow verification of tracking performance and system accuracy.
+- Full mathematical derivations and implementation details are available in the [Software Architecture Report](Software-Architecture-Report.pdf).
+
+### Object Detection and Tracking
+- The robot tracks green tennis balls in real time using computer vision.
+- Each video frame is processed to isolate pixels matching the ball’s color, with filtering steps applied to reduce noise.
+- Detected ball regions are identified as contours, and the position of each object is calculated from the contour center.
+- Object positions are updated continuously, and smooth motion is achieved by interpolating between positions over time.
+- This approach demonstrates real-time image processing, object tracking, and integration with motion control algorithms.
+
+
+## Technologies Used
+- Python
+- OpenCV 
+- Numpy
+- Matplotlib
+- Raspberry Pi 
+- Motors / chassis 
+  
