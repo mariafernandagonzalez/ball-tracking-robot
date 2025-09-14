@@ -55,7 +55,10 @@ The robot’s behavior can be controlled via the keyboard. Users can start scann
 | q   | Quit the program |
 
 ## Additional Resources / Code
-###Final Code:
+
+- The final code can be found [here](Final-Code).
+- Additional code and in-depth explanation can be found in the [Software Architecture Report](Software-Architecture-Report.pdf) and [Object Detector Report](Object-Detector-Report.pdf).
+- A [Hardware Report](Hardware-Report.pdf) is also available.
 
 
 
