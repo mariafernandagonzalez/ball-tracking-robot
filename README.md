@@ -9,4 +9,4 @@ A mobile robot that uses computer vision and real-time image processing to detec
 ### Smooth Motion Control
 - The robot calculates motor positions and velocities along a cubic spline trajectory at each time step.
 - This ensures fluid movement without abrupt starts or stops, improving tracking performance.
-- Full mathematical derivations and implementation details are available in the [project report](docs/project_report.pdf).
+- Full mathematical derivations and implementation details are available in the [project report](Software-Architecture-Report.pdf).
