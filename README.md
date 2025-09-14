@@ -60,5 +60,11 @@ The robot’s behavior can be controlled via the keyboard. Users can start scann
 - Additional code and in-depth explanations of algorithms, motor control, and object detection can be found in the [Software Architecture Report](Software-Architecture-Report.pdf) and [Object Detector Report](Object-Detector-Report.pdf).
 - A [Hardware Report](Hardware-Report.pdf) is also available for reference.
 
+## Contributors
+- Maria Gonzalez, Caltech
+- Kaliyah Solomon, Caltech
 
+## Acknowledgments
+- Professor Gunter Niemeyer, Caltech – guidance and support for this project
+- Head TA Kevin Gauld, Caltech - assistance and mentorship during the course
 
