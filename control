@@ -1,0 +1,312 @@
+# Import useful packages
+import hebi
+import numpy as np 9 import matplotlib.pyplot as plt
+# For future use
+from math import pi, sin, cos, asin, acos, atan2, sqrt, inf
+from time import sleep, time
+from keycheck import kbhit, getch
+
+#
+# HEBI Initialization
+#
+# Create the motor group, and pre−allocate the command and feedback
+# data structures. Remember to set the names list to match your
+21 # motor.
+22 #
+23 names = [’4.6’, ’6.2’]
+24 group = hebi.Lookup().get_group_from_names([’robotlab’], names)
+25 if group is None:
+26 print("Unable to find both motors " + str(names))
+27 raise Exception("Unable to connect to motors")
+28
+29 command = hebi.GroupCommand(group.size)
+30 feedback = hebi.GroupFeedback(group.size)
+31
+32 dt = 0.01 # HEBI feedback comes in at 100Hz!
+33
+34
+35 #
+36 # PARAMATERS
+37 #
+38
+39 feedback = group.get_next_feedback(reuse_fbk=feedback)
+40 pinit_pan = feedback.position[0]
+41 pinit_tilt = feedback.position[1]
+42 p0=[pinit_pan, pinit_tilt]
+43
+44 v0 = [0.0, 0.0]
+45 v_max = [2.72, 2.0]
+46
+47 #
+48 #FUNCTIONS
+49 #
+50 def movetime(p0, pf, v_max, v0, vf):
+51 """Computes the time required to move between p0 and pf."""
+52 distance = abs(pf − p0)
+53 tm = ((6*distance) / ((4*v_max)+ (v0+vf)))
+54 tm = tm + ((abs(v0)*0.4)/v_max)
+55 if tm < 0.1:
+56 return 0.1
+57 return tm
+58
+59 def calcparams(t0, tf, p0, pf, v0, vf):
+60 """Computes the cubic spline parameters a, b, c, d."""
+61 a = p0
+62 b = v0
+63 c = (3 * (pf − p0) / (tf−t0)**2) − (2 * v0 + vf) / (tf−t0)
+64 d = (−2 * (pf − p0) / (tf−t0)**3) + (v0 + vf) / (tf−t0)**2
+65 return a, b, c, d
+66 def splinecmds(t,a,b,c,d):
+67 pcmd = a + b * (t) + c * t**2 + d * (t)**3
+68 vcmd = b + 2 * c * (t) + 3 * d * (t)**2
+69 return pcmd, vcmd
+70 #
+71 #
+72
+73 t = 0.0 # Current time
+74 t0 = 0.0 # Start time of the current segment
+75
+76 pf = [p0[0], p0[1]]
+77 vf = [0.0, 0.0]
+78 tm = max(movetime(p0[0], pf[0], v_max[0], v0[0], vf[0]), movetime(p0[1], pf[1], v_max[1], v0[1], vf[1]))
+79
+80 tf = tm + t0
+81 a_p, b_p, c_p, d_p = calcparams(t0, tf, p0[0], pf[0], v0[0], vf[0])
+82 a_t, b_t, c_t, d_t = calcparams(t0, tf, p0[1], pf[1], v0[1], vf[1])
+83
+84 # Data for plotting
+85 Time, PAct_Pan, PCmd_Pan, VAct_Pan, VCmd_Pan, Verror_Pan, Perror_Pan = [], [], [], [], [], [], []
+86 PAct_Tilt, PCmd_Tilt, VAct_Tilt, VCmd_Tilt, Verror_Tilt, Perror_Tilt = [], [], [], [], [], []
+87
+88 # Main control loop
+89 while True:
+90 # Compute the current position and velocity commands
+91 pcmd_pan, vcmd_pan = splinecmds((t − t0), a_p, b_p, c_p, d_p)
+92 pcmd_tilt, vcmd_tilt = splinecmds((t − t0), a_t, b_t, c_t, d_t)
+93
+94 # Send commands to the motor
+95 feedback = group.get_next_feedback(reuse_fbk=feedback)
+96 pact_pan = feedback.position[0]
+97 pact_tilt = feedback.position[1]
+98 vact_pan = feedback.velocity[0]
+99 vact_tilt = feedback.velocity[1]
+Tuesday October 29, 2024 1/4
+Printed on stingray
+Oct 29, 24 0:46 Page 2/4 goals4step6.py
+100
+101 command.position = [pcmd_pan, pcmd_tilt]
+102 command.velocity = [vcmd_pan, vcmd_tilt]
+103 group.send_command(command)
+104
+105 # Store data for plotting
+106 Time.append(t)
+107 PAct_Pan.append(pact_pan)
+108 PCmd_Pan.append(pcmd_pan)
+109 VAct_Pan.append(vact_pan)
+110 VCmd_Pan.append(vcmd_pan)
+111
+112 PAct_Tilt.append(pact_tilt)
+113 PCmd_Tilt.append(pcmd_tilt)
+114 VAct_Tilt.append(vact_tilt)
+115 VCmd_Tilt.append(vcmd_tilt)
+116
+117 Perror_Pan.append(pact_pan − pcmd_pan)
+118 Verror_Pan.append(vact_pan − vcmd_pan)
+119
+120 Perror_Tilt.append(pact_tilt − pcmd_tilt)
+121 Verror_Tilt.append(vact_tilt − vcmd_tilt)
+122
+123 if abs(vcmd_pan) > v_max[0] or abs(vcmd_tilt) > v_max[1]:
+124 print("Exceeding max vel!")
+125 # Check for key presses
+126 if kbhit():
+127 ch = getch()
+128 if ch == ’a’:
+129 t0 = t
+130 p0 = [pcmd_pan, pcmd_tilt]
+131 v0 = [vcmd_pan, vcmd_tilt]
+132
+133 pf = [1.0, 0.0]
+134
+135 if p0[0] == pf[0]:
+136 v0[0] = 0.0
+137 if p0[1] == pf[1]:
+138 v0[1] = 0.0
+139
+140 vf = [0.0, 0.0]
+141 tm = max(movetime(p0[0], pf[0], v_max[0], v0[0], vf[0]), movetime(p0[1], pf[1], v_max[1], v0[1], vf[1]))
+142
+143 144 145 tf = tm + t0
+a_p, b_p, c_p, d_p = calcparams(t0, tf, p0[0], pf[0], v0[0], vf[0])
+a_t, b_t, c_t, d_t = calcparams(t0, tf, p0[1], pf[1], v0[1], vf[1])
+146
+147 elif ch == ’b’:
+148 t0 = t
+149 p0 = [pcmd_pan, pcmd_tilt]
+150 v0 = [vcmd_pan, vcmd_tilt]
+151
+152 pf = [−1.0, 0.0]
+153
+154 if p0[0] == pf[0]:
+155 v0[0] = 0.0
+156 if p0[1] == pf[1]:
+157 v0[1] = 0.0
+158
+159 vf = [0.0, 0.0]
+160 tm = max(movetime(p0[0], pf[0], v_max[0], v0[0], vf[0]), movetime(p0[0], pf[0], v_max[0], v0[0], vf[0]))
+161
+162 163 164 tf = tm + t0
+a_p, b_p, c_p, d_p = calcparams(t0, tf, p0[0], pf[0], v0[0], vf[0])
+a_t, b_t, c_t, d_t = calcparams(t0, tf, p0[1], pf[1], v0[1], vf[1])
+165
+166
+167 elif ch == ’i’:
+168 t0 = t
+169 p0 = [pcmd_pan, pcmd_tilt]
+170 v0 = [vcmd_pan, vcmd_tilt]
+171
+172 pf = [pinit_pan, pinit_tilt]
+173
+174 if p0[0] == pf[0]:
+175 v0[0] = 0.0
+176 if p0[1] == pf[1]:
+177 v0[1] = 0.0
+178
+179 vf = [0.0, 0.0]
+180 tm = max(movetime(p0[0], pf[0], v_max[0], v0[0], vf[0]), movetime(p0[1], pf[1], v_max[1], v0[1], vf[1]))
+181
+182 tf = tm + t0
+183 a_p, b_p, c_p, d_p = calcparams(t0, tf, p0[0], pf[0], v0[0], vf[0])
+184 a_t, b_t, c_t, d_t = calcparams(t0, tf, p0[1], pf[1], v0[1], vf[1])
+185 elif ch == ’c’:
+186 t0 = t
+187 p0 = [pcmd_pan, pcmd_tilt]
+188 v0 = [vcmd_pan, vcmd_tilt]
+189
+190 pf = [1.0, pi/4]
+191 vf = [0.0, 0.0]
+192 tm = max(movetime(p0[0], pf[0], v_max[0], v0[0], vf[0]), movetime(p0[1], pf[1], v_max[1], v0[1], vf[1]))
+193
+194 tf = tm + t0
+195 a_p, b_p, c_p, d_p = calcparams(t0, tf, p0[0], pf[0], v0[0], vf[0])
+196 a_t, b_t, c_t, d_t = calcparams(t0, tf, p0[1], pf[1], v0[1], vf[1])
+197 elif ch == ’d’:
+198 t0 = t
+2/4 Tuesday October 29, 2024
+Printed on stingray
+Oct 29, 24 0:46 Page 3/4 goals4step6.py
+199 p0 = [pcmd_pan, pcmd_tilt]
+200 v0 = [vcmd_pan, vcmd_tilt]
+201
+202 pf = [0.0, −pi/6]
+203 if p0[0] == pf[0]:
+204 v0[0] = 0.0
+205 if p0[1] == pf[1]:
+206 v0[1] = 0.0
+207 vf = [0.0, 0.0]
+208 tm = max(movetime(p0[0], pf[0], v_max[0], v0[0], vf[0]), movetime(p0[1], pf[1], v_max[1], v0[1], vf[1]))
+209
+210 tf = tm + t0
+211 a_p, b_p, c_p, d_p = calcparams(t0, tf, p0[0], pf[0], v0[0], vf[0])
+212 a_t, b_t, c_t, d_t = calcparams(t0, tf, p0[1], pf[1], v0[1], vf[1])
+213 elif ch == ’e’:
+214 t0 = t
+215 p0 = [pcmd_pan, pcmd_tilt]
+216 v0 = [vcmd_pan, vcmd_tilt]
+
+pf = [−pi/4, pi/6]
+
+if p0[0] == pf[0]:
+v0[0] = 0.0
+if p0[1] == pf[1]:
+v0[1] = 0.0
+
+vf = [0.0, 0.0]
+tm = max(movetime(p0[0], pf[0], v_max[0], v0[0], vf[0]), movetime(p0[1], pf[1], v_max[1], v0[1], vf[1]))
+
+tf = tm + t0
+a_p, b_p, c_p, d_p = calcparams(t0, tf, p0[0], pf[0], v0[0], vf[0])
+a_t, b_t, c_t, d_t = calcparams(t0, tf, p0[1], pf[1], v0[1], vf[1])
+elif ch == ’z’:
+t0 = t
+p0 = [pcmd_pan, pcmd_tilt]
+v0 = [vcmd_pan, vcmd_tilt]
+
+pf = [0.0, 0.0]
+
+  if p0[0] == pf[0]:
+    v0[0] = 0.0
+  if p0[1] == pf[1]:
+    v0[1] = 0.0
+
+  vf = [0.0, 0.0]
+  tm = max(movetime(p0[0], pf[0], v_max[0], v0[0], vf[0]), movetime(p0[1], pf[1], v_max[1], v0[1], vf[1]))
+  
+  tf = tm + t0
+  a_p, b_p, c_p, d_p = calcparams(t0, tf, p0[0], pf[0], v0[0], vf[0])
+  a_t, b_t, c_t, d_t = calcparams(t0, tf, p0[1], pf[1], v0[1], vf[1])
+
+elif ch == ’q’:
+  # Quit the program
+  break
+
+if t+dt > tf:
+  t0 = t
+  p0 = [pcmd_pan, pcmd_tilt]
+  v0 = [0.0, 0.0]
+  
+  pf = [pcmd_pan, pcmd_tilt]
+  
+  vf = [0.0, 0.0]
+  tm = inf
+  
+  tf = tm + t0
+  a_p, b_p, c_p, d_p = calcparams(t0, tf, p0[0], pf[0], v0[0], vf[0])
+  a_t, b_t, c_t, d_t = calcparams(t0, tf, p0[1], pf[1], v0[1], vf[1])
+
+# Advance time
+t += dt
+
+# Stop if the segment is complete
+if t >= tf:
+  t0 = t
+  p0 = [pcmd_pan, pcmd_tilt]
+  v0 = [0.0, 0.0]
+
+  pf = [pcmd_pan, pcmd_tilt]
+  
+  vf = [0.0, 0.0]
+  tm = inf
+  
+  tf = tm + t0
+  a_p, b_p, c_p, d_p = calcparams(t0, tf, p0[0], pf[0], v0[0], vf[0])
+  a_t, b_t, c_t, d_t = calcparams(t0, tf, p0[1], pf[1], v0[1], vf[1])
+
+
+# Plot the results
+fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+ax1.plot(Time[0:len(Time)], PAct_Tilt[0:len(PAct_Tilt)], color=’green’, linestyle=’−’, label=’Act_Tilt’)
+ax1.plot(Time[0:len(Time)], PCmd_Tilt[0:len(PCmd_Tilt)], color=’green’, linestyle=’−−’, label=’Cmd_Tilt’)
+ax2.plot(Time[0:len(Time)], VAct_Tilt[0:len(VAct_Tilt)], color=’green’, linestyle=’−’, label=’Act_Tilt’)
+ax2.plot(Time[0:len(Time)], VCmd_Tilt[0:len(VCmd_Tilt)], color=’green’, linestyle=’−−’, label=’Cmd_Tilt’)
+ax1.plot(Time[0:len(Time)], Perror_Tilt[0:len(Perror_Tilt)], color=’purple’, linestyle=’−’, label=’Error_Tilt’)
+ax2.plot(Time[0:len(Time)], Verror_Tilt[0:len(Verror_Tilt)], color=’purple’, linestyle=’−−’, label=’Error_Tilt’)
+
+ax1.plot(Time[0:len(Time)], PAct_Pan[0:len(PAct_Pan)], color=’blue’, linestyle=’−’, label=’Act_Pan’)
+ax1.plot(Time[0:len(Time)], PCmd_Pan[0:len(PCmd_Pan)], color=’blue’, linestyle=’−−’, label=’Cmd_Pan’)
+ax2.plot(Time[0:len(Time)], VAct_Pan[0:len(VAct_Pan)], color=’blue’, linestyle=’−’, label=’Act_Pan’)
+ax2.plot(Time[0:len(Time)], VCmd_Pan[0:len(VCmd_Pan)], color=’blue’, linestyle=’−−’, label=’Cmd_Pan’)
+ax1.plot(Time[0:len(Time)], Perror_Pan[0:len(Perror_Pan)], color=’red’, linestyle=’−’, label=’Error_Pan’)
+ax2.plot(Time[0:len(Time)], Verror_Pan[0:len(Verror_Pan)], color=’red’, linestyle=’−−’, label=’Error_Pan’)
+
+ax1.set_title(’Robot Data − Step 6’)
+ax1.set_ylabel(’Position (rad)’)
+ax2.set_ylabel(’Velocity (rad/s)’)
+ax2.set_xlabel(’Time (s)’)
+
+ax1.grid()
+ax2.grid()
+ax1.legend()
+ax2.legend()
+
+plt.show()
