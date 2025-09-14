@@ -7,7 +7,6 @@ A mobile robot that uses computer vision and real-time image processing to detec
 
 ## Features
 ### Smooth Motion Control
--### Smooth Motion Control
 - Motor positions and velocities are planned using cubic spline interpolation for both pan and tilt axes.
 - At each control loop iteration, the system calculates updated commands based on current feedback and target positions.
 - Real-time adjustments ensure smooth transitions, avoiding abrupt starts or stops while accurately following dynamic targets.
