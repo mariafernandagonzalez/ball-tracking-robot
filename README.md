@@ -13,12 +13,13 @@ A mobile robot that uses computer vision and real-time image processing to detec
 - Data logging and visualization of positions and velocities allow verification of tracking performance and system accuracy.
 - Full mathematical derivations and implementation details are available in the [Software Architecture Report](Software-Architecture-Report.pdf).
 
-### Object Detection and Tracking
+### Object Detector
 - The robot tracks green tennis balls in real time using computer vision.
 - Each video frame is processed to isolate pixels matching the ball’s color, with filtering steps applied to reduce noise.
 - Detected ball regions are identified as contours, and the position of each object is calculated from the contour center.
 - Object positions are updated continuously, and smooth motion is achieved by interpolating between positions over time.
 - This approach demonstrates real-time image processing, object tracking, and integration with motion control algorithms.
+  
 
 
 ## Technologies Used
